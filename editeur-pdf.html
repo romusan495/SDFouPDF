@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDF ou PDF ? — éditeur gratuit sans compte ni CB</title>
+<style>
+  :root{
+    --teal-deep:#0a463d;
+    --teal:#0f7a6c;
+    --teal-light:#16a68f;
+    --teal-pale:#e7f4f1;
+    --yellow:#ffc531;
+    --yellow-dark:#e8a800;
+    --ink:#1f2d3a;
+    --ink-soft:#66757f;
+    --line:#e1e7e6;
+    --paper:#ffffff;
+    --surface:#f2f6f5;
+    --danger:#d6524a;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--surface);color:var(--ink);}
+  body{
+    display:flex;flex-direction:column;
+    font-family:'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    overflow:hidden;
+  }
+
+  /* ---------- Header / toolbar ---------- */
+  header{
+    background:var(--paper);
+    border-bottom:1px solid var(--line);
+    padding:10px 16px;
+    display:flex;align-items:center;gap:14px;
+    flex-wrap:wrap;
+    z-index:20;
+  }
+  .brand{display:flex;flex-direction:column;line-height:1.05;margin-right:4px;}
+  .brand-top{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--teal);font-weight:700;}
+  .brand-main{font-size:21px;font-weight:800;color:var(--ink);white-space:nowrap;}
+  .brand-main .dot{color:var(--yellow-dark);}
+
+  .tagline{
+    font-size:12px;color:var(--ink-soft);white-space:nowrap;
+    display:flex;align-items:center;gap:5px;
+    background:var(--teal-pale);border:1px solid var(--line);
+    padding:6px 12px;border-radius:20px;
+  }
+  .tagline b{color:var(--teal-deep);font-weight:700;}
+
+  .toolbar-group{
+    display:flex;align-items:center;gap:4px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:4px;
+  }
+  button.tool{
+    background:transparent;border:none;color:var(--ink-soft);
+    width:34px;height:34px;border-radius:6px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;font-size:16px;transition:background .12s, color .12s;
+  }
+  button.tool:hover{background:var(--teal-pale);color:var(--teal-deep);}
+  button.tool.active{background:var(--teal);color:#fff;}
+  button.tool:disabled{opacity:.35;cursor:not-allowed;}
+
+  button.pill{
+    background:var(--paper);border:1px solid var(--line);color:var(--ink);
+    padding:8px 14px;border-radius:20px;font-family:inherit;font-size:12.5px;font-weight:600;
+    cursor:pointer;letter-spacing:.02em;
+    display:flex;align-items:center;gap:6px;
+    transition:border-color .12s, color .12s, background .12s;
+  }
+  button.pill:hover{border-color:var(--teal);color:var(--teal-deep);}
+  button.pill.primary{background:var(--teal);border-color:var(--teal);color:#fff;}
+  button.pill.primary:hover{background:var(--teal-light);border-color:var(--teal-light);color:#fff;}
+  button.pill.accent{background:var(--yellow);border-color:var(--yellow);color:var(--ink);}
+  button.pill.accent:hover{background:var(--yellow-dark);border-color:var(--yellow-dark);color:var(--ink);}
+  button.pill:disabled{opacity:.35;cursor:not-allowed;border-color:var(--line);color:var(--ink-soft);}
+
+  .page-nav{display:flex;align-items:center;gap:8px;color:var(--ink-soft);font-size:12.5px;}
+  .page-nav input{
+    width:42px;background:var(--paper);border:1px solid var(--line);color:var(--ink);
+    text-align:center;border-radius:4px;padding:5px 2px;font-family:inherit;font-size:12.5px;
+  }
+
+  .spacer{flex:1;}
+
+  .mini-control{display:flex;align-items:center;gap:6px;color:var(--ink-soft);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;}
+  .mini-control input[type=color]{
+    width:26px;height:26px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer;
+  }
+  .mini-control input[type=range]{accent-color:var(--teal);width:70px;}
+  .mini-control input[type=number]{
+    width:44px;background:var(--paper);border:1px solid var(--line);color:var(--ink);
+    border-radius:4px;padding:4px;font-family:inherit;font-size:12px;
+  }
+
+  input[type=file]{display:none;}
+
+  /* ---------- Main stage ---------- */
+  main{
+    flex:1;overflow:auto;position:relative;
+    display:flex;justify-content:center;align-items:flex-start;
+    padding:36px 24px 80px;
+    background:
+      radial-gradient(circle at 50% 0%, #ffffff 0%, var(--surface) 65%);
+  }
+
+  .empty-state{
+    margin-top:8vh;text-align:center;color:var(--ink-soft);
+    max-width:440px;
+  }
+  .empty-state .seal{
+    width:64px;height:64px;border-radius:50%;
+    border:2px solid var(--teal);background:var(--teal-pale);
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 22px;color:var(--teal-deep);font-size:26px;
+  }
+  .empty-state h1{
+    font-weight:800;
+    color:var(--ink);font-size:25px;margin:0 0 10px;
+  }
+  .empty-state p{font-size:13px;line-height:1.7;margin:0 0 24px;}
+
+  .page-wrap{
+    position:relative;
+    background:var(--paper);
+    box-shadow:0 16px 40px rgba(15,60,52,.16), 0 2px 0 rgba(15,60,52,.06);
+    line-height:0;
+  }
+  .page-wrap canvas{display:block;}
+  #ink-canvas{position:absolute;top:0;left:0;touch-action:none;}
+  #ink-canvas.pen-active{cursor:crosshair;}
+
+  /* the overlay layer itself must be click-through so tools underneath
+     (the ink canvas for drawing, or a plain click for the text tool) keep
+     receiving pointer events; only the elements/suggestions inside it are
+     interactive. */
+  #elements-layer{pointer-events:none;}
+  #elements-layer .overlay-el{pointer-events:auto;}
+
+  .overlay-el{
+    position:absolute;
+    border:1.5px dashed transparent;
+    cursor:move;
+    user-select:none;
+  }
+  .overlay-el.selected{border-color:var(--yellow-dark);}
+  .overlay-el .del-btn{
+    position:absolute;top:-11px;right:-11px;width:20px;height:20px;border-radius:50%;
+    background:var(--danger);color:#fff;border:2px solid var(--paper);
+    display:none;align-items:center;justify-content:center;font-size:11px;cursor:pointer;line-height:1;
+    font-family:inherit;
+  }
+  .overlay-el.selected .del-btn, .overlay-el:hover .del-btn{display:flex;}
+  .overlay-el .resize-handle{
+    position:absolute;bottom:-7px;right:-7px;width:14px;height:14px;border-radius:3px;
+    background:var(--yellow-dark);border:2px solid var(--paper);cursor:nwse-resize;display:none;
+  }
+  .overlay-el.selected .resize-handle{display:block;}
+
+  .overlay-el.field-suggestion{
+    border:1.5px dashed var(--yellow-dark);
+    background:rgba(255,197,49,0.16);
+    border-radius:3px;
+    cursor:pointer;
+    transition:background .12s, border-color .12s;
+  }
+  .overlay-el.field-suggestion:hover{background:rgba(255,197,49,0.32);border-color:var(--teal);}
+  .overlay-el.field-suggestion::after{
+    content:'✎';
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    font-size:11px;color:var(--teal-deep);opacity:.9;pointer-events:none;
+  }
+
+  .text-el{
+    min-width:20px;min-height:1em;padding:2px 4px;
+    outline:none;white-space:pre-wrap;word-break:break-word;
+    font-family:'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  }
+  .sig-el img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;}
+
+  .page-count-badge{
+    position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+    background:var(--paper);border:1px solid var(--line);color:var(--ink-soft);
+    padding:6px 16px;border-radius:20px;font-size:12px;letter-spacing:.04em;
+    box-shadow:0 6px 18px rgba(15,60,52,.12);
+    display:none;
+  }
+  .page-count-badge.show{display:block;}
+
+  /* ---------- Signature modal ---------- */
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(15,30,27,.55);
+    display:none;align-items:center;justify-content:center;z-index:100;
+  }
+  .modal-backdrop.show{display:flex;}
+  .modal{
+    background:var(--paper);border:1px solid var(--line);border-radius:12px;
+    padding:22px;width:min(520px,92vw);
+    box-shadow:0 20px 60px rgba(15,60,52,.25);
+  }
+  .modal h2{
+    font-weight:800;
+    margin:0 0 4px;color:var(--ink);font-size:19px;
+  }
+  .modal p{color:var(--ink-soft);font-size:12px;margin:0 0 14px;line-height:1.6;}
+  #sig-pad{
+    width:100%;height:200px;background:var(--surface);border:1px solid var(--line);border-radius:8px;
+    touch-action:none;cursor:crosshair;
+  }
+  .modal-footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:10px;}
+  .sig-color-row{display:flex;align-items:center;gap:8px;color:var(--ink-soft);font-size:11px;}
+  .sig-color-row input[type=color]{width:24px;height:24px;border:1px solid var(--line);border-radius:6px;padding:0;background:none;}
+  .modal-actions{display:flex;gap:8px;}
+
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+
+  /* ---------- Drag & drop overlay ---------- */
+  #drop-overlay{
+    position:fixed;inset:0;z-index:200;
+    background:rgba(10,70,61,.88);
+    display:none;align-items:center;justify-content:center;
+    pointer-events:none; /* the window-level drop listeners handle the event, not this layer */
+  }
+  #drop-overlay.show{display:flex;}
+  .drop-card{
+    text-align:center;color:#fff;
+    border:3px dashed rgba(255,255,255,.6);
+    border-radius:20px;
+    padding:48px 64px;
+  }
+  .drop-icon{font-size:38px;margin-bottom:10px;}
+  .drop-title{font-size:24px;font-weight:800;margin-bottom:6px;}
+  .drop-sub{font-size:13px;opacity:.85;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="brand-top">Éditeur</span>
+    <span class="brand-main">SDF <span class="dot">ou</span> PDF ?</span>
+  </div>
+  <div class="tagline">🏠 Ici, <b>SDF</b> = <span style="opacity:.75">Sans Devoir Facturer</span> — pas de compte, pas de CB</div>
+
+  <label class="pill primary" for="file-input">⤒ Ouvrir un PDF</label>
+  <input type="file" id="file-input" accept="application/pdf">
+
+  <div class="toolbar-group" id="tools-group">
+    <button class="tool active" data-tool="select" title="Sélectionner / déplacer">⇖</button>
+    <button class="tool" data-tool="text" title="Ajouter du texte">T</button>
+    <button class="tool" data-tool="pen" title="Dessiner à main levée">✎</button>
+    <button class="tool" data-tool="signature" title="Signer">✒</button>
+  </div>
+
+  <button class="pill accent" id="toggle-fields" title="Repère automatiquement les champs à remplir (Fait le, Date, Signature, pointillés, champs de formulaire...)">✎ Champs auto</button>
+
+  <div class="mini-control" id="text-controls" style="display:none;">
+    <span>Taille</span>
+    <input type="range" id="font-size" min="10" max="64" value="18">
+    <input type="color" id="text-color" value="#1f2d3a">
+  </div>
+
+  <div class="mini-control" id="pen-controls" style="display:none;">
+    <span>Trait</span>
+    <input type="range" id="pen-width" min="1" max="10" value="3">
+    <input type="color" id="pen-color" value="#0f7a6c">
+  </div>
+
+  <div class="spacer"></div>
+
+  <div class="page-nav" id="page-nav" style="display:none;">
+    <button class="pill" id="prev-page">‹</button>
+    <span><input type="number" id="page-num" min="1" value="1"> / <span id="page-total">1</span></span>
+    <button class="pill" id="next-page">›</button>
+  </div>
+
+  <button class="pill" id="clear-page-btn" style="display:none;">Effacer la page</button>
+  <button class="pill primary" id="download-btn" style="display:none;">⤓ Télécharger le PDF</button>
+</header>
+
+<main id="main-stage">
+  <div class="empty-state" id="empty-state">
+    <div class="seal">✒</div>
+    <h1>Déposez un PDF, repartez avec</h1>
+    <p>Ajoutez du texte, dessinez, apposez une signature manuscrite, puis exportez — sans créer de compte, sans sortir la carte bleue. Tout se passe dans votre navigateur, rien n'est envoyé sur un serveur.</p>
+    <label class="pill primary" for="file-input">⤒ Choisir un fichier PDF</label>
+  </div>
+
+  <div class="page-wrap" id="page-wrap" style="display:none;">
+    <canvas id="pdf-canvas"></canvas>
+    <canvas id="ink-canvas"></canvas>
+    <div id="elements-layer" style="position:absolute;top:0;left:0;"></div>
+  </div>
+</main>
+
+<div id="drop-overlay">
+  <div class="drop-card">
+    <div class="drop-icon">⤓</div>
+    <div class="drop-title">Lâche-le ici</div>
+    <div class="drop-sub">On ouvre ton PDF direct — toujours sans compte, sans CB.</div>
+  </div>
+</div>
+
+<div class="page-count-badge" id="save-badge">Page enregistrée</div>
+
+<div class="modal-backdrop" id="sig-backdrop">
+  <div class="modal">
+    <h2>Votre signature</h2>
+    <p>Dessinez avec la souris ou le doigt, puis placez-la sur le document.</p>
+    <canvas id="sig-pad"></canvas>
+    <div class="modal-footer">
+      <div class="sig-color-row">
+        Encre <input type="color" id="sig-color" value="#1f1d1a">
+      </div>
+      <div class="modal-actions">
+        <button class="pill" id="sig-clear">Effacer</button>
+        <button class="pill" id="sig-cancel">Annuler</button>
+        <button class="pill primary" id="sig-use">Utiliser cette signature</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+// ---------------- State ----------------
+let pdfDoc = null;            // pdf.js document
+let originalBytes = null;     // ArrayBuffer of the uploaded file
+let numPages = 0;
+let currentPage = 1;
+let currentTool = 'select';
+let selectedElId = null;
+let elIdCounter = 1;
+
+// per-page store: { elements:[...], inkDataUrl:string|null }
+const pageStore = new Map();
+
+// auto-detected fillable fields (dotted/underscored blanks, "Fait le", "Date", "Signature"...)
+const fieldCache = new Map();      // pageNum -> detected fields (fractions), computed once per page
+const acroFieldsByPage = new Map(); // pageNum -> real PDF form-field boxes (authoritative, when present)
+let fieldDetectionEnabled = true;
+let lastSuggestions = [];          // suggestions currently eligible for the visible page
+
+// pending signature waiting to be placed by a click
+let pendingSignature = null; // {dataUrl, ratio}
+
+// drag/resize runtime info
+let dragInfo = null;
+
+const canvasEl = document.getElementById('pdf-canvas');
+const inkCanvas = document.getElementById('ink-canvas');
+const inkCtx = inkCanvas.getContext('2d');
+const elLayer = document.getElementById('elements-layer');
+const pageWrap = document.getElementById('page-wrap');
+const emptyState = document.getElementById('empty-state');
+const stage = document.getElementById('main-stage');
+
+function ensurePageEntry(p){
+  if(!pageStore.has(p)) pageStore.set(p, {elements:[], inkDataUrl:null});
+  return pageStore.get(p);
+}
+
+// ---------------- File loading ----------------
+document.getElementById('file-input').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(file) await loadPdfFile(file);
+  e.target.value = ''; // allow re-selecting the same file later
+});
+
+async function loadPdfFile(file){
+  if(!file) return;
+  if(file.type && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')){
+    alert("Ce fichier ne semble pas être un PDF.");
+    return;
+  }
+  const buf = await file.arrayBuffer();
+  originalBytes = buf.slice(0);
+  const loadingTask = pdfjsLib.getDocument({data: buf.slice(0)});
+  pdfDoc = await loadingTask.promise;
+  numPages = pdfDoc.numPages;
+  pageStore.clear();
+  fieldCache.clear();
+  acroFieldsByPage.clear();
+  currentPage = 1;
+  selectedElId = null;
+
+  emptyState.style.display = 'none';
+  pageWrap.style.display = '';
+  document.getElementById('page-nav').style.display = '';
+  document.getElementById('download-btn').style.display = '';
+  document.getElementById('clear-page-btn').style.display = '';
+  document.getElementById('page-total').textContent = numPages;
+  document.getElementById('page-num').max = numPages;
+
+  await readAcroFormFields(originalBytes);
+  await renderPage(1);
+}
+
+// ---------------- Drag & drop ----------------
+let dragDepth = 0; // counts nested dragenter/dragleave so the overlay doesn't flicker on child elements
+const dropOverlay = document.getElementById('drop-overlay');
+
+['dragenter','dragover','dragleave','drop'].forEach(evtName=>{
+  window.addEventListener(evtName, (e)=>{ e.preventDefault(); e.stopPropagation(); });
+});
+window.addEventListener('dragenter', (e)=>{
+  if(!e.dataTransfer || !Array.from(e.dataTransfer.types||[]).includes('Files')) return;
+  dragDepth++;
+  dropOverlay.classList.add('show');
+});
+window.addEventListener('dragleave', ()=>{
+  dragDepth = Math.max(0, dragDepth-1);
+  if(dragDepth === 0) dropOverlay.classList.remove('show');
+});
+window.addEventListener('drop', async (e)=>{
+  dragDepth = 0;
+  dropOverlay.classList.remove('show');
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(file) await loadPdfFile(file);
+});
+
+// Many administrative / official PDFs (CERFA, factures, etc.) use real
+// interactive form fields for the blanks instead of literal "...." text —
+// in that case there is nothing for a text-based scan to find. Read the
+// PDF's AcroForm (via pdf-lib) up front and use it as the authoritative
+// source of fillable zones whenever it exists.
+async function readAcroFormFields(bytes){
+  try{
+    const { PDFDocument } = PDFLib;
+    const doc = await PDFDocument.load(bytes.slice(0), { ignoreEncryption: true });
+    let form;
+    try{ form = doc.getForm(); } catch(e){ form = null; }
+    if(!form) return;
+
+    const pages = doc.getPages();
+    const pageRefs = pages.map(p => p.ref.toString());
+
+    form.getFields().forEach(field=>{
+      let widgets = [];
+      try{ widgets = field.acroField.getWidgets(); } catch(e){ return; }
+      widgets.forEach(w=>{
+        let rect, pRef;
+        try{ rect = w.getRectangle(); pRef = w.P ? w.P() : null; } catch(e){ return; }
+        if(!rect) return;
+        let pIdx = pRef ? pageRefs.indexOf(pRef.toString()) : -1;
+        if(pIdx === -1){
+          // some PDFs omit /P on the widget — fall back to page 1 rather than dropping the field
+          pIdx = 0;
+        }
+        const pw = pages[pIdx].getWidth(), ph = pages[pIdx].getHeight();
+        if(!pw || !ph) return;
+        const list = acroFieldsByPage.get(pIdx+1) || [];
+        list.push({
+          xFrac: rect.x / pw,
+          yFrac: (ph - rect.y - rect.height) / ph,
+          wFrac: rect.width / pw,
+          hFrac: rect.height / ph
+        });
+        acroFieldsByPage.set(pIdx+1, list);
+      });
+    });
+  } catch(e){ console.warn('Lecture des champs de formulaire impossible :', e); }
+}
+
+// ---------------- Rendering ----------------
+async function renderPage(num){
+  saveCurrentInk();
+  currentPage = num;
+  document.getElementById('page-num').value = num;
+
+  const page = await pdfDoc.getPage(num);
+  const targetWidth = Math.min(stage.clientWidth - 60, 860);
+  const unscaled = page.getViewport({scale:1});
+  const scale = targetWidth / unscaled.width;
+  const viewport = page.getViewport({scale});
+
+  canvasEl.width = viewport.width;
+  canvasEl.height = viewport.height;
+  inkCanvas.width = viewport.width;
+  inkCanvas.height = viewport.height;
+  pageWrap.style.width = viewport.width + 'px';
+  pageWrap.style.height = viewport.height + 'px';
+  elLayer.style.width = viewport.width + 'px';
+  elLayer.style.height = viewport.height + 'px';
+
+  const ctx = canvasEl.getContext('2d');
+  await page.render({canvasContext: ctx, viewport}).promise;
+
+  // restore ink
+  inkCtx.clearRect(0,0,inkCanvas.width, inkCanvas.height);
+  const entry = ensurePageEntry(num);
+  if(entry.inkDataUrl){
+    const img = new Image();
+    img.onload = ()=> inkCtx.drawImage(img, 0, 0, inkCanvas.width, inkCanvas.height);
+    img.src = entry.inkDataUrl;
+  }
+
+  // fillable fields: prefer real PDF form fields (AcroForm) when the
+  // document has them — they're exact. Otherwise fall back to scanning
+  // the text layer for dotted blanks / "Fait le", "Date", "Signature"...
+  elLayer.innerHTML = '';
+  const acro = acroFieldsByPage.get(num);
+  const rawSuggestions = (acro && acro.length) ? acro : await detectFields(num, page, viewport);
+  lastSuggestions = rawSuggestions.filter(f => !entry.elements.some(e =>
+    Math.abs(e.xFrac - f.xFrac) < 0.03 && Math.abs(e.yFrac - f.yFrac) < 0.03
+  ));
+  renderSuggestions(lastSuggestions);
+
+  // restore elements (drawn after suggestions so they sit on top)
+  entry.elements.forEach(renderElementDOM);
+  selectedElId = null;
+}
+
+// ---------------- Auto field detection ----------------
+async function detectFields(pageNum, page, viewport){
+  if(fieldCache.has(pageNum)) return fieldCache.get(pageNum);
+  const found = [];
+  try{
+    const textContent = await page.getTextContent();
+
+    // Build one "box" per character. Some PDF generators emit an entire
+    // dotted line as one text run, others emit each dot as its own run —
+    // going character-by-character and regrouping into visual lines lets
+    // both cases match the same way.
+    const charBoxes = [];
+    textContent.items.forEach(item=>{
+      const str = item.str || '';
+      if(!str) return;
+      const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+      const heightPx = Math.hypot(tx[2], tx[3]) || 12;
+      const widthPx = (item.width || 0) * viewport.scale;
+      const n = Math.max(str.length, 1);
+      const charW = widthPx / n;
+      for(let i=0;i<str.length;i++){
+        charBoxes.push({
+          ch: str[i],
+          left: tx[4] + charW*i,
+          width: charW,
+          baseline: tx[5],
+          height: heightPx
+        });
+      }
+    });
+
+    // regroup into visual lines by baseline proximity
+    charBoxes.sort((a,b)=> a.baseline - b.baseline || a.left - b.left);
+    const lines = [];
+    let currentLine = [];
+    let lastBaseline = null;
+    charBoxes.forEach(cb=>{
+      if(lastBaseline === null || Math.abs(cb.baseline - lastBaseline) < Math.max(3, cb.height*0.35)){
+        currentLine.push(cb);
+      } else {
+        if(currentLine.length) lines.push(currentLine);
+        currentLine = [cb];
+      }
+      lastBaseline = cb.baseline;
+    });
+    if(currentLine.length) lines.push(currentLine);
+
+    const blankRe = /[.\-_·•]{4,}/;
+    const labelRe = /(fait\s*(à|a|le)?\s*:?|date\s*:?|signature\s*:?|lieu\s*:?|nom(\s*(et\s*pr[ée]nom)?)?\s*:?|pr[ée]nom\s*:?|adresse\s*:?|t[ée]l[ée]phone\s*:?|e-?mail\s*:?)$/i;
+
+    const boxFromChars = (chars)=>{
+      const left = Math.min(...chars.map(c=>c.left));
+      const right = Math.max(...chars.map(c=>c.left+c.width));
+      const maxHeight = Math.max(...chars.map(c=>c.height));
+      const baseline = chars[0].baseline;
+      return {
+        xFrac: left / viewport.width,
+        yFrac: (baseline - maxHeight*0.85) / viewport.height,
+        wFrac: Math.max(right-left, maxHeight*2) / viewport.width,
+        hFrac: (maxHeight*1.3) / viewport.height
+      };
+    };
+
+    lines.forEach(line=>{
+      line.sort((a,b)=> a.left - b.left);
+      const lineStr = line.map(c=>c.ch).join('');
+      if(!lineStr.trim()) return;
+
+      // a run of dots/underscores/dashes anywhere on the line = a blank to fill
+      const blankMatch = lineStr.match(blankRe);
+      if(blankMatch){
+        const start = blankMatch.index, end = start + blankMatch[0].length;
+        found.push(boxFromChars(line.slice(start, end)));
+      }
+
+      // a known label with nothing (or only blank marks) after it on the line
+      const labelMatch = lineStr.match(labelRe);
+      if(labelMatch){
+        const labelEnd = labelMatch.index + labelMatch[0].length;
+        const rest = lineStr.slice(labelEnd);
+        if(!rest.trim() || /^[.\-_\s]*$/.test(rest)){
+          const lastChar = line[labelEnd-1] || line[line.length-1];
+          const gap = lastChar.height * 0.4;
+          const fieldLeft = lastChar.left + lastChar.width + gap;
+          const fieldW = Math.min(viewport.width - fieldLeft - 8, lastChar.height*10);
+          if(fieldW > lastChar.height*2){
+            found.push({
+              xFrac: fieldLeft / viewport.width,
+              yFrac: (lastChar.baseline - lastChar.height*0.85) / viewport.height,
+              wFrac: fieldW / viewport.width,
+              hFrac: (lastChar.height*1.3) / viewport.height
+            });
+          }
+        }
+      }
+    });
+  } catch(e){ console.warn('Détection de champs impossible :', e); }
+
+  // drop near-duplicate boxes
+  const deduped = [];
+  found.forEach(f=>{
+    const overlap = deduped.some(d => Math.abs(d.xFrac-f.xFrac)<0.015 && Math.abs(d.yFrac-f.yFrac)<0.015);
+    if(!overlap) deduped.push(f);
+  });
+
+  fieldCache.set(pageNum, deduped);
+  return deduped;
+}
+
+function renderSuggestions(list){
+  elLayer.querySelectorAll('.field-suggestion').forEach(n=>n.remove());
+  if(!fieldDetectionEnabled) return;
+  list.forEach(f=>{
+    const div = document.createElement('div');
+    div.className = 'overlay-el field-suggestion';
+    div.style.left = (f.xFrac * pageWrap.clientWidth) + 'px';
+    div.style.top = (f.yFrac * pageWrap.clientHeight) + 'px';
+    div.style.width = (f.wFrac * pageWrap.clientWidth) + 'px';
+    div.style.height = (f.hFrac * pageWrap.clientHeight) + 'px';
+    div.title = 'Cliquer pour remplir ce champ';
+    div.addEventListener('pointerdown', ev => ev.stopPropagation());
+    div.addEventListener('click', ev=>{
+      ev.stopPropagation();
+      convertSuggestionToText(f);
+      div.remove();
+    });
+    elLayer.appendChild(div);
+  });
+}
+
+function convertSuggestionToText(f){
+  const fontSizePx = Math.max(10, f.hFrac * pageWrap.clientHeight * 0.85);
+  const el = {
+    id: 'el'+(elIdCounter++),
+    type:'text',
+    xFrac: f.xFrac, yFrac: f.yFrac,
+    wFrac: f.wFrac,
+    fontSizeFrac: fontSizePx / pageWrap.clientHeight,
+    color: document.getElementById('text-color').value,
+    text:''
+  };
+  ensurePageEntry(currentPage).elements.push(el);
+  const dom = renderElementDOM(el);
+  selectElement(el.id);
+  setTool('select');
+  const editable = dom.querySelector('.text-el');
+  if(editable){
+    editable.contentEditable = 'true';
+    editable.style.cursor = 'text';
+    editable.focus();
+  }
+}
+
+document.getElementById('toggle-fields').addEventListener('click', (e)=>{
+  fieldDetectionEnabled = !fieldDetectionEnabled;
+  e.currentTarget.classList.toggle('primary', fieldDetectionEnabled);
+  renderSuggestions(lastSuggestions);
+});
+
+function saveCurrentInk(){
+  if(!pdfDoc) return;
+  const entry = ensurePageEntry(currentPage);
+  // only persist if canvas has any non-transparent pixel (cheap check skipped for simplicity)
+  entry.inkDataUrl = inkCanvas.toDataURL('image/png');
+}
+
+// ---------------- Page navigation ----------------
+document.getElementById('prev-page').onclick = ()=>{ if(currentPage>1) renderPage(currentPage-1); };
+document.getElementById('next-page').onclick = ()=>{ if(currentPage<numPages) renderPage(currentPage+1); };
+document.getElementById('page-num').addEventListener('change', (e)=>{
+  let v = parseInt(e.target.value,10);
+  if(isNaN(v)) v = currentPage;
+  v = Math.max(1, Math.min(numPages, v));
+  renderPage(v);
+});
+
+document.getElementById('clear-page-btn').onclick = ()=>{
+  if(!pdfDoc) return;
+  inkCtx.clearRect(0,0,inkCanvas.width, inkCanvas.height);
+  const entry = ensurePageEntry(currentPage);
+  entry.inkDataUrl = null;
+  entry.elements = [];
+  elLayer.innerHTML = '';
+};
+
+// ---------------- Tool switching ----------------
+document.querySelectorAll('#tools-group .tool').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    if(!pdfDoc) return;
+    currentTool = btn.dataset.tool;
+    document.querySelectorAll('#tools-group .tool').forEach(b=>b.classList.toggle('active', b===btn));
+    document.getElementById('text-controls').style.display = currentTool==='text' ? 'flex':'none';
+    document.getElementById('pen-controls').style.display = currentTool==='pen' ? 'flex':'none';
+    inkCanvas.classList.toggle('pen-active', currentTool==='pen');
+    inkCanvas.style.pointerEvents = currentTool==='pen' ? 'auto':'none';
+    if(currentTool === 'signature'){
+      openSignatureModal();
+      // revert to select once modal opens; actual placement mode is handled by pendingSignature
+      setTool('select', true);
+    }
+    deselectAll();
+  });
+});
+
+function setTool(name, silent){
+  currentTool = name;
+  document.querySelectorAll('#tools-group .tool').forEach(b=>b.classList.toggle('active', b.dataset.tool===name));
+  document.getElementById('text-controls').style.display = name==='text' ? 'flex':'none';
+  document.getElementById('pen-controls').style.display = name==='pen' ? 'flex':'none';
+  inkCanvas.classList.toggle('pen-active', name==='pen');
+  inkCanvas.style.pointerEvents = name==='pen' ? 'auto':'none';
+}
+
+// ---------------- Text tool: click page to add text ----------------
+pageWrap.addEventListener('click', (e)=>{
+  if(!pdfDoc) return;
+
+  // placing a pending signature
+  if(pendingSignature){
+    const rect = pageWrap.getBoundingClientRect();
+    const xFrac = (e.clientX - rect.left) / rect.width;
+    const yFrac = (e.clientY - rect.top) / rect.height;
+    addSignatureElement(xFrac, yFrac);
+    pendingSignature = null;
+    document.body.style.cursor = 'default';
+    return;
+  }
+
+  if(currentTool === 'text'){
+    // don't add a new box if the click landed on an existing element
+    if(e.target.closest('.overlay-el')) return;
+    const rect = pageWrap.getBoundingClientRect();
+    const xFrac = (e.clientX - rect.left) / rect.width;
+    const yFrac = (e.clientY - rect.top) / rect.height;
+    addTextElement(xFrac, yFrac);
+  }
+});
+
+function addTextElement(xFrac, yFrac){
+  const fontSizePx = parseInt(document.getElementById('font-size').value,10);
+  const color = document.getElementById('text-color').value;
+  const el = {
+    id: 'el'+(elIdCounter++),
+    type:'text',
+    xFrac, yFrac,
+    wFrac: 0.28, hFrac: fontSizePx/pageWrap.clientHeight,
+    fontSizeFrac: fontSizePx / pageWrap.clientHeight,
+    color,
+    text:'Votre texte'
+  };
+  ensurePageEntry(currentPage).elements.push(el);
+  const dom = renderElementDOM(el);
+  selectElement(el.id);
+  const editable = dom.querySelector('.text-el');
+  editable.contentEditable = 'true';
+  editable.style.cursor = 'text';
+  editable.focus();
+  document.execCommand('selectAll', false, null);
+  setTool('select');
+}
+
+// ---------------- Signature modal ----------------
+const sigBackdrop = document.getElementById('sig-backdrop');
+const sigPad = document.getElementById('sig-pad');
+const sigCtx = sigPad.getContext('2d');
+let sigDrawing = false;
+let sigHasStrokes = false;
+
+function openSignatureModal(){
+  sigBackdrop.classList.add('show');
+  const r = sigPad.getBoundingClientRect();
+  sigPad.width = r.width * 2;
+  sigPad.height = r.height * 2;
+  sigCtx.scale(2,2);
+  sigCtx.lineCap = 'round';
+  sigCtx.lineJoin = 'round';
+  sigHasStrokes = false;
+}
+function sigPos(e){
+  const r = sigPad.getBoundingClientRect();
+  const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+  const cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+  return {x:cx, y:cy};
+}
+sigPad.addEventListener('pointerdown', (e)=>{
+  sigDrawing = true; sigHasStrokes = true;
+  const p = sigPos(e);
+  sigCtx.strokeStyle = document.getElementById('sig-color').value;
+  sigCtx.lineWidth = 2.4;
+  sigCtx.beginPath();
+  sigCtx.moveTo(p.x,p.y);
+  sigPad.setPointerCapture(e.pointerId);
+});
+sigPad.addEventListener('pointermove', (e)=>{
+  if(!sigDrawing) return;
+  const p = sigPos(e);
+  sigCtx.lineTo(p.x,p.y);
+  sigCtx.stroke();
+});
+sigPad.addEventListener('pointerup', ()=> sigDrawing=false);
+sigPad.addEventListener('pointerleave', ()=> sigDrawing=false);
+
+document.getElementById('sig-clear').onclick = ()=>{
+  sigCtx.clearRect(0,0,sigPad.width, sigPad.height);
+  sigHasStrokes = false;
+};
+document.getElementById('sig-cancel').onclick = ()=>{
+  sigBackdrop.classList.remove('show');
+};
+document.getElementById('sig-use').onclick = ()=>{
+  if(!sigHasStrokes){ sigBackdrop.classList.remove('show'); return; }
+  pendingSignature = { dataUrl: sigPad.toDataURL('image/png') };
+  sigBackdrop.classList.remove('show');
+  document.body.style.cursor = 'copy';
+};
+
+function addSignatureElement(xFrac, yFrac){
+  const wFrac = 0.26;
+  const hFrac = wFrac * 0.42; // signature pad aspect ratio approximation
+  const el = {
+    id:'el'+(elIdCounter++),
+    type:'signature',
+    xFrac: Math.max(0, xFrac - wFrac/2),
+    yFrac: Math.max(0, yFrac - hFrac/2),
+    wFrac, hFrac,
+    dataUrl: pendingSignature.dataUrl
+  };
+  ensurePageEntry(currentPage).elements.push(el);
+  renderElementDOM(el);
+  selectElement(el.id);
+}
+
+// ---------------- Overlay element rendering / drag / resize ----------------
+function renderElementDOM(el){
+  const div = document.createElement('div');
+  div.className = 'overlay-el ' + (el.type==='text' ? 'text-el-wrap':'sig-el');
+  div.dataset.id = el.id;
+  positionDOM(div, el);
+
+  const del = document.createElement('div');
+  del.className = 'del-btn';
+  del.textContent = '×';
+  // stop the pointerdown here too, otherwise it bubbles to the drag handler below,
+  // which captures the pointer on the parent and swallows the click on this button
+  del.addEventListener('pointerdown', (ev)=> ev.stopPropagation());
+  del.addEventListener('click', (ev)=>{
+    ev.stopPropagation();
+    const entry = ensurePageEntry(currentPage);
+    entry.elements = entry.elements.filter(x=>x.id!==el.id);
+    if(selectedElId === el.id) selectedElId = null;
+    div.remove();
+  });
+  div.appendChild(del);
+
+  if(el.type === 'text'){
+    const editable = document.createElement('div');
+    editable.className = 'text-el';
+    editable.contentEditable = 'false'; // starts in "move" mode; double-click to type
+    editable.style.fontSize = (el.fontSizeFrac * pageWrap.clientHeight) + 'px';
+    editable.style.color = el.color;
+    editable.style.cursor = 'move';
+    editable.textContent = el.text;
+    editable.addEventListener('input', ()=>{ el.text = editable.textContent; });
+
+    // single click/drag on the text always moves the box; double-click edits it.
+    editable.addEventListener('pointerdown', (ev)=>{
+      if(editable.contentEditable === 'true'){
+        ev.stopPropagation(); // let the browser place the cursor / select text instead of dragging
+      }
+    });
+    editable.addEventListener('dblclick', (ev)=>{
+      ev.stopPropagation();
+      editable.contentEditable = 'true';
+      editable.style.cursor = 'text';
+      editable.focus();
+      document.execCommand('selectAll', false, null);
+    });
+    editable.addEventListener('blur', ()=>{
+      editable.contentEditable = 'false';
+      editable.style.cursor = 'move';
+    });
+    div.appendChild(editable);
+
+    const handle = document.createElement('div');
+    handle.className = 'resize-handle';
+    handle.title = 'Glisser pour agrandir / réduire le texte';
+    handle.addEventListener('pointerdown', (ev)=> startResize(ev, el, div));
+    div.appendChild(handle);
+  } else {
+    const img = document.createElement('img');
+    img.src = el.dataUrl;
+    div.appendChild(img);
+    const handle = document.createElement('div');
+    handle.className = 'resize-handle';
+    handle.addEventListener('pointerdown', (ev)=> startResize(ev, el, div));
+    div.appendChild(handle);
+  }
+
+  div.addEventListener('pointerdown', (ev)=> startDrag(ev, el, div));
+  elLayer.appendChild(div);
+  return div;
+}
+
+function positionDOM(div, el){
+  div.style.left = (el.xFrac * pageWrap.clientWidth) + 'px';
+  div.style.top = (el.yFrac * pageWrap.clientHeight) + 'px';
+  div.style.width = (el.wFrac * pageWrap.clientWidth) + 'px';
+  if(el.type === 'signature'){
+    div.style.height = (el.hFrac * pageWrap.clientHeight) + 'px';
+  }
+}
+
+function selectElement(id){
+  selectedElId = id;
+  document.querySelectorAll('.overlay-el').forEach(d=> d.classList.toggle('selected', d.dataset.id===id));
+  const entry = ensurePageEntry(currentPage);
+  const el = entry.elements.find(x=>x.id===id);
+  if(el && el.type === 'text'){
+    document.getElementById('font-size').value = Math.round(el.fontSizeFrac * pageWrap.clientHeight);
+    document.getElementById('text-color').value = el.color;
+  }
+}
+function deselectAll(){
+  selectedElId = null;
+  document.querySelectorAll('.overlay-el').forEach(d=> d.classList.remove('selected'));
+}
+elLayer.addEventListener('pointerdown', ()=>{}); // container itself
+pageWrap.addEventListener('pointerdown', (e)=>{
+  if(!e.target.closest('.overlay-el')) deselectAll();
+});
+
+function startDrag(ev, el, div){
+  if(currentTool !== 'select') return;
+  ev.stopPropagation();
+  selectElement(el.id);
+  const startX = ev.clientX, startY = ev.clientY;
+  const startLeft = el.xFrac * pageWrap.clientWidth;
+  const startTop = el.yFrac * pageWrap.clientHeight;
+  div.setPointerCapture(ev.pointerId);
+
+  function onMove(e2){
+    const dx = e2.clientX - startX, dy = e2.clientY - startY;
+    let newLeft = startLeft + dx, newTop = startTop + dy;
+    newLeft = Math.max(0, Math.min(pageWrap.clientWidth - 10, newLeft));
+    newTop = Math.max(0, Math.min(pageWrap.clientHeight - 10, newTop));
+    el.xFrac = newLeft / pageWrap.clientWidth;
+    el.yFrac = newTop / pageWrap.clientHeight;
+    div.style.left = newLeft + 'px';
+    div.style.top = newTop + 'px';
+  }
+  function onUp(e2){
+    div.releasePointerCapture(ev.pointerId);
+    div.removeEventListener('pointermove', onMove);
+    div.removeEventListener('pointerup', onUp);
+  }
+  div.addEventListener('pointermove', onMove);
+  div.addEventListener('pointerup', onUp);
+}
+
+function startResize(ev, el, div){
+  ev.stopPropagation();
+  const startX = ev.clientX, startY = ev.clientY;
+  const startW = el.wFrac * pageWrap.clientWidth;
+  div.setPointerCapture(ev.pointerId);
+
+  if(el.type === 'text'){
+    const startFontPx = el.fontSizeFrac * pageWrap.clientHeight;
+    const textDom = div.querySelector('.text-el');
+
+    function onMove(e2){
+      // diagonal drag distance drives a uniform scale, like resizing a text box in a slide editor
+      const dist = Math.hypot(e2.clientX - startX, e2.clientY - startY);
+      const dir = (e2.clientX - startX) + (e2.clientY - startY) >= 0 ? 1 : -1;
+      const ratio = Math.max(0.3, 1 + (dir * dist) / Math.max(startW, 60));
+      const newFontPx = Math.max(8, Math.min(200, startFontPx * ratio));
+      const newW = Math.max(30, startW * ratio);
+      el.fontSizeFrac = newFontPx / pageWrap.clientHeight;
+      el.wFrac = newW / pageWrap.clientWidth;
+      if(textDom) textDom.style.fontSize = newFontPx + 'px';
+      div.style.width = newW + 'px';
+      if(selectedElId === el.id) document.getElementById('font-size').value = Math.round(newFontPx);
+    }
+    function onUp(){
+      div.releasePointerCapture(ev.pointerId);
+      div.removeEventListener('pointermove', onMove);
+      div.removeEventListener('pointerup', onUp);
+    }
+    div.addEventListener('pointermove', onMove);
+    div.addEventListener('pointerup', onUp);
+    return;
+  }
+
+  const startH = el.hFrac * pageWrap.clientHeight;
+  function onMove(e2){
+    const dx = e2.clientX - startX;
+    const newW = Math.max(30, startW + dx);
+    const ratio = startH / startW;
+    const newH = newW * ratio;
+    el.wFrac = newW / pageWrap.clientWidth;
+    el.hFrac = newH / pageWrap.clientHeight;
+    div.style.width = newW + 'px';
+    div.style.height = newH + 'px';
+  }
+  function onUp(){
+    div.releasePointerCapture(ev.pointerId);
+    div.removeEventListener('pointermove', onMove);
+    div.removeEventListener('pointerup', onUp);
+  }
+  div.addEventListener('pointermove', onMove);
+  div.addEventListener('pointerup', onUp);
+}
+
+// live update selected text element on control change
+document.getElementById('font-size').addEventListener('input', (e)=>{
+  if(!selectedElId) return;
+  const entry = ensurePageEntry(currentPage);
+  const el = entry.elements.find(x=>x.id===selectedElId);
+  if(!el || el.type!=='text') return;
+  el.fontSizeFrac = parseInt(e.target.value,10) / pageWrap.clientHeight;
+  const dom = elLayer.querySelector('[data-id="'+el.id+'"] .text-el');
+  if(dom) dom.style.fontSize = (el.fontSizeFrac*pageWrap.clientHeight)+'px';
+});
+document.getElementById('text-color').addEventListener('input', (e)=>{
+  if(!selectedElId) return;
+  const entry = ensurePageEntry(currentPage);
+  const el = entry.elements.find(x=>x.id===selectedElId);
+  if(!el || el.type!=='text') return;
+  el.color = e.target.value;
+  const dom = elLayer.querySelector('[data-id="'+el.id+'"] .text-el');
+  if(dom) dom.style.color = el.color;
+});
+
+// ---------------- Pen tool: freehand drawing on ink canvas ----------------
+let penDrawing = false;
+function inkPos(e){
+  const r = inkCanvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+inkCanvas.addEventListener('pointerdown', (e)=>{
+  if(currentTool !== 'pen') return;
+  penDrawing = true;
+  const p = inkPos(e);
+  inkCtx.strokeStyle = document.getElementById('pen-color').value;
+  inkCtx.lineWidth = parseInt(document.getElementById('pen-width').value,10);
+  inkCtx.lineCap = 'round';
+  inkCtx.lineJoin = 'round';
+  inkCtx.beginPath();
+  inkCtx.moveTo(p.x,p.y);
+  inkCanvas.setPointerCapture(e.pointerId);
+});
+inkCanvas.addEventListener('pointermove', (e)=>{
+  if(!penDrawing) return;
+  const p = inkPos(e);
+  inkCtx.lineTo(p.x,p.y);
+  inkCtx.stroke();
+});
+inkCanvas.addEventListener('pointerup', ()=> penDrawing=false);
+inkCanvas.addEventListener('pointerleave', ()=> penDrawing=false);
+
+// ---------------- Export ----------------
+document.getElementById('download-btn').addEventListener('click', async ()=>{
+  if(!originalBytes) return;
+  saveCurrentInk();
+  const btn = document.getElementById('download-btn');
+  const originalLabel = btn.textContent;
+  btn.textContent = 'Export en cours…';
+  btn.disabled = true;
+
+  try{
+    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+    const outDoc = await PDFDocument.load(originalBytes.slice(0));
+    const font = await outDoc.embedFont(StandardFonts.Helvetica);
+    const pages = outDoc.getPages();
+
+    for(let i=0;i<pages.length;i++){
+      const pageNum = i+1;
+      const entry = pageStore.get(pageNum);
+      if(!entry) continue;
+      const page = pages[i];
+      const { width: pw, height: ph } = page.getSize();
+
+      // ink layer (only if it has drawing — cheap heuristic: dataUrl exists)
+      if(entry.inkDataUrl){
+        const hasContent = await dataUrlHasPixels(entry.inkDataUrl);
+        if(hasContent){
+          const pngBytes = dataURLToUint8(entry.inkDataUrl);
+          const img = await outDoc.embedPng(pngBytes);
+          page.drawImage(img, {x:0, y:0, width:pw, height:ph});
+        }
+      }
+
+      for(const el of entry.elements){
+        if(el.type === 'text'){
+          const fontSize = el.fontSizeFrac * ph;
+          const x = el.xFrac * pw;
+          const yTop = el.yFrac * ph;
+          const lines = (el.text || '').split('\n');
+          const c = hexToRgb01(el.color);
+          lines.forEach((line, idx)=>{
+            const y = ph - yTop - fontSize*(idx+1);
+            page.drawText(line, {
+              x, y, size: fontSize, font,
+              color: rgb(c.r, c.g, c.b),
+              maxWidth: pw - x - 4
+            });
+          });
+        } else if(el.type === 'signature'){
+          const pngBytes = dataURLToUint8(el.dataUrl);
+          const img = await outDoc.embedPng(pngBytes);
+          const w = el.wFrac * pw;
+          const h = el.hFrac * ph;
+          const x = el.xFrac * pw;
+          const y = ph - (el.yFrac * ph) - h;
+          page.drawImage(img, {x, y, width:w, height:h});
+        }
+      }
+    }
+
+    const outBytes = await outDoc.save();
+    const blob = new Blob([outBytes], {type:'application/pdf'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'document-annote.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch(err){
+    console.error(err);
+    alert("L'export a échoué : " + err.message);
+  } finally {
+    btn.textContent = originalLabel;
+    btn.disabled = false;
+  }
+});
+
+function dataURLToUint8(dataUrl){
+  const base64 = dataUrl.split(',')[1];
+  const bin = atob(base64);
+  const arr = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+function hexToRgb01(hex){
+  const h = hex.replace('#','');
+  return {
+    r: parseInt(h.substring(0,2),16)/255,
+    g: parseInt(h.substring(2,4),16)/255,
+    b: parseInt(h.substring(4,6),16)/255,
+  };
+}
+function dataUrlHasPixels(dataUrl){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const c = document.createElement('canvas');
+      c.width = Math.min(img.width, 200);
+      c.height = Math.min(img.height, 200);
+      const cx = c.getContext('2d');
+      cx.drawImage(img, 0, 0, c.width, c.height);
+      const data = cx.getImageData(0,0,c.width,c.height).data;
+      let found = false;
+      for(let i=3;i<data.length;i+=4){ if(data[i] !== 0){ found = true; break; } }
+      resolve(found);
+    };
+    img.onerror = ()=> resolve(false);
+    img.src = dataUrl;
+  });
+}
+
+// ---------------- Resize handling ----------------
+window.addEventListener('resize', ()=>{
+  if(pdfDoc) renderPage(currentPage);
+});
+</script>
+</body>
+</html>
